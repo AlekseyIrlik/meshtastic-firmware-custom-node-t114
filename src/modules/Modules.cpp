@@ -1,4 +1,7 @@
 #include "configuration.h"
+// Пользовательские модули
+#include "AutoNeighborMessage.h"
+
 #if !MESHTASTIC_EXCLUDE_INPUTBROKER
 #include "buzz/BuzzerFeedbackThread.h"
 #include "modules/SystemCommandsModule.h"
@@ -248,4 +251,7 @@ void setupModules()
     // NOTE! This module must be added LAST because it likes to check for replies from other modules and avoid sending extra
     // acks
     routingModule = new RoutingModule();
+
+    // Наши модули
+    autoNeighborMessage = new AutoNeighborMessage(); // автоотправка сообщений
 }
