@@ -12,7 +12,12 @@ class AutoNeighborMessage : public SinglePortModule, public concurrency::OSThrea
 
   private:
     uint32_t lastSendTime = 0;
-    void sendMessage();
+
+    float lastLat = 0;
+    float lastLon = 0;
+    bool hasLastPos = false;
+
+    void sendMessage(float lat, float lon);
     float calculateDistance(float lat1, float lon1, float lat2, float lon2);
 };
 

@@ -248,10 +248,9 @@ void setupModules()
 #if defined(HAS_HARDWARE_WATCHDOG)
     watchdogThread = new WatchdogThread();
 #endif
+
+    autoNeighborMessage = new AutoNeighborMessage();
     // NOTE! This module must be added LAST because it likes to check for replies from other modules and avoid sending extra
     // acks
     routingModule = new RoutingModule();
-
-    // Наши модули
-    autoNeighborMessage = new AutoNeighborMessage(); // автоотправка сообщений
 }
