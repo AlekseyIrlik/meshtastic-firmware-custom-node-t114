@@ -1,6 +1,7 @@
 #include "configuration.h"
 // Пользовательские модули
-#include "AutoNeighborMessage.h"
+// #include "AutoNeighborMessage.h"
+#include "TrackerModule.h"
 
 #if !MESHTASTIC_EXCLUDE_INPUTBROKER
 #include "buzz/BuzzerFeedbackThread.h"
@@ -249,7 +250,7 @@ void setupModules()
     watchdogThread = new WatchdogThread();
 #endif
 
-    autoNeighborMessage = new AutoNeighborMessage();
+    trackerModule = new TrackerModule();
     // NOTE! This module must be added LAST because it likes to check for replies from other modules and avoid sending extra
     // acks
     routingModule = new RoutingModule();
