@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Meshtastic Tracks</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="info" id="info">Загрузка...</div>
+    <script>
+        // Данные треков, вставленные Python-скриптом
+        var tracksData = [{"timestamp": 1777365598, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 41, "rssi": -40, "snr": 6.2}, {"timestamp": 1777365658, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 47, "rssi": -40, "snr": 6.2}, {"timestamp": 1777365718, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 49, "rssi": -40, "snr": 6.2}, {"timestamp": 1777365779, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 50, "rssi": -40, "snr": 6.2}, {"timestamp": 1777365417, "device_id": 4219518239, "lat": 52.5153198, "lon": 85.1579253, "alt": 193, "battery": 9, "rssi": -31, "snr": 5.8}, {"timestamp": 1777365477, "device_id": 4219518239, "lat": 52.51532, "lon": 85.1579307, "alt": 193, "battery": 17, "rssi": -31, "snr": 5.8}, {"timestamp": 1777365839, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 50, "rssi": -31, "snr": 5.8}, {"timestamp": 1777365900, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 50, "rssi": -31, "snr": 5.8}, {"timestamp": 1777366015, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 52, "rssi": -45, "snr": 6.2}, {"timestamp": 1777366076, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 53, "rssi": -45, "snr": 6.2}, {"timestamp": 1777366136, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 55, "rssi": -45, "snr": 6.2}, {"timestamp": 1777366197, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 53, "rssi": -45, "snr": 6.2}, {"timestamp": 1777366257, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 56, "rssi": -59, "snr": 6.8}, {"timestamp": 1777366318, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 57, "rssi": -59, "snr": 6.8}, {"timestamp": 1777366378, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 55, "rssi": -59, "snr": 6.8}, {"timestamp": 1777366439, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 58, "rssi": -59, "snr": 6.8}, {"timestamp": 1777366560, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 59, "rssi": -83, "snr": 5.8}, {"timestamp": 1777366620, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 61, "rssi": -83, "snr": 5.8}, {"timestamp": 1777366681, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 30, "rssi": -83, "snr": 5.8}, {"timestamp": 1777366741, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 27, "rssi": -83, "snr": 5.8}, {"timestamp": 1777366862, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 28, "rssi": -71, "snr": 5.8}, {"timestamp": 1777366923, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 28, "rssi": -71, "snr": 5.8}, {"timestamp": 1777366983, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 27, "rssi": -71, "snr": 5.8}, {"timestamp": 1777367044, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 27, "rssi": -71, "snr": 5.8}, {"timestamp": 1777365598, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 41, "rssi": -51, "snr": 6.8}, {"timestamp": 1777365658, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 47, "rssi": -51, "snr": 6.8}, {"timestamp": 1777365718, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 49, "rssi": -51, "snr": 6.8}, {"timestamp": 1777365779, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 50, "rssi": -51, "snr": 6.8}, {"timestamp": 1777365417, "device_id": 4219518239, "lat": 52.5153198, "lon": 85.1579253, "alt": 193, "battery": 9, "rssi": -15, "snr": 7.0}, {"timestamp": 1777365477, "device_id": 4219518239, "lat": 52.51532, "lon": 85.1579307, "alt": 193, "battery": 17, "rssi": -15, "snr": 7.0}, {"timestamp": 1777365839, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 50, "rssi": -15, "snr": 7.0}, {"timestamp": 1777365900, "device_id": 4219518239, "lat": 52.5152936, "lon": 85.1578919, "alt": 193, "battery": 50, "rssi": -15, "snr": 7.0}, {"timestamp": 1777366015, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 52, "rssi": 0, "snr": 6.2}, {"timestamp": 1777366076, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 53, "rssi": 0, "snr": 6.2}, {"timestamp": 1777366136, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 55, "rssi": 0, "snr": 6.2}, {"timestamp": 1777366197, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 53, "rssi": 0, "snr": 6.2}, {"timestamp": 1777366257, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 56, "rssi": 0, "snr": 7.0}, {"timestamp": 1777366318, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 57, "rssi": 0, "snr": 7.0}, {"timestamp": 1777366378, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 55, "rssi": 0, "snr": 7.0}, {"timestamp": 1777366439, "device_id": 4219518239, "lat": 52.5143916, "lon": 85.158275, "alt": 259, "battery": 58, "rssi": 0, "snr": 7.0}];
+
+        var map = L.map('map');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var allPoints = [];
+        var deviceTracks = {};
+
+        // Группируем точки по device_id
+        tracksData.forEach(function(pt) {
+            var dev = pt.device_id.toString(16);
+            if (!deviceTracks[dev]) {
+                deviceTracks[dev] = [];
+            }
+            deviceTracks[dev].push([pt.lat, pt.lon]);
+            allPoints.push([pt.lat, pt.lon]);
+        });
+
+        // Рисуем треки для каждого устройства
+        Object.keys(deviceTracks).forEach(function(dev) {
+            var points = deviceTracks[dev];
+            var hue = (parseInt(dev, 16) * 137) % 360;
+            var color = 'hsl(' + hue + ', 80%, 50%)';
+
+            // Полилиния маршрута
+            var line = L.polyline(points, {color: color, weight: 4, opacity: 0.7}).addTo(map);
+
+            // Маркер начала (зелёный)
+            if (points.length > 0) {
+                L.circleMarker(points[0], {
+                    radius: 6,
+                    color: 'green',
+                    fillColor: '#fff',
+                    fillOpacity: 1,
+                    weight: 3
+                }).bindTooltip('Start 0x' + dev, {permanent: false}).addTo(map);
+            }
+
+            // Маркер конца (красный)
+            if (points.length > 1) {
+                L.circleMarker(points[points.length-1], {
+                    radius: 6,
+                    color: 'red',
+                    fillColor: '#fff',
+                    fillOpacity: 1,
+                    weight: 3
+                }).bindTooltip('End 0x' + dev, {permanent: false}).addTo(map);
+            }
+
+            // Промежуточные точки (маленькие кружки)
+            points.forEach(function(coord) {
+                L.circleMarker(coord, {
+                    radius: 3,
+                    color: color,
+                    fillColor: '#fff',
+                    fillOpacity: 1,
+                    weight: 2
+                }).addTo(map);
+            });
+        });
+
+        // Подгоняем карту под все точки
+        if (allPoints.length > 0) {
+            var bounds = L.latLngBounds(allPoints);
+            map.fitBounds(bounds, {padding: [50, 50]});
+            document.getElementById('info').innerHTML =
+                'Устройств: ' + Object.keys(deviceTracks).length +
+                ', точек: ' + allPoints.length;
+        } else {
+            document.getElementById('info').innerHTML = 'Нет данных';
+        }
+    </script>
+</body>
+</html>

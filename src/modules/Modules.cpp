@@ -250,8 +250,8 @@ void setupModules()
     watchdogThread = new WatchdogThread();
 #endif
 
-    trackerModule = new TrackerModule();
-    // NOTE! This module must be added LAST because it likes to check for replies from other modules and avoid sending extra
-    // acks
+    bool isGateway = (config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER);
+    trackerModule = new TrackerModule(isGateway);
+
     routingModule = new RoutingModule();
 }

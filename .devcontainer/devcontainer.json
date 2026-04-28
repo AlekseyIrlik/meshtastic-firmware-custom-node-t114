@@ -8,9 +8,12 @@
   // Эти аргументы позволяют контейнеру видеть USB-порты (плату) напрямую
   "runArgs": [
     "--privileged",
+    "--security-opt",
+    "label=disable",
+    "--group-add",
+    "20",
     "-v",
-    "/dev:/dev",
-    "--device-cgroup-rule=c 189:* rmw"
+    "/dev:/dev"
   ],
   "customizations": {
     "vscode": {

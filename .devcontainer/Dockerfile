@@ -37,13 +37,12 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Создаём группу с GID 14 (соответствует хостовой группе uucp) под именем host-uucp
-# и добавляем пользователя vscode в неё
-RUN groupadd -g 14 host-uucp && usermod -aG host-uucp vscode
+# Группа с GID 20 (dialout) уже существует в базовом образе — просто добавляем в неё пользователя
+RUN groupadd -g 14 host-uucp \
+ && usermod -aG host-uucp,dialout vscode
 
 RUN pipx install platformio
 
 COPY 99-platformio-udev.rules /etc/udev/rules.d/99-platformio-udev.rules
 
 USER vscode
-
-HEALTHCHECK NONE

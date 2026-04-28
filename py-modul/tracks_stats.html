@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Meshtastic Tracks + Stats</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 70%; }
+        #sidebar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 30%;
+            height: 100%;
+            background: #f8f9fa;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h2 { margin-top: 0; color: #333; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .chart-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-text {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="sidebar">
+        <h2>📊 Статистика трека</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalPoints">-</div>
+                <div class="stat-label">Всего точек</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgBattery">-</div>
+                <div class="stat-label">Средний заряд</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="duration">-</div>
+                <div class="stat-label">Длительность</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="maxSnr">-</div>
+                <div class="stat-label">Макс. SNR</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>🔋 Распределение заряда батареи</h3>
+            <canvas id="batteryChart" width="300" height="200"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3>📶 RSSI / SNR по времени</h3>
+            <canvas id="signalChart" width="300" height="200"></canvas>
+        </div>
+
+        <div class="info-text">
+            <strong>Устройство:</strong> 0x0xfb80bd1f<br>
+            <strong>Первая точка:</strong> __FIRST_TIME__<br>
+            <strong>Последняя точка:</strong> __LAST_TIME__
+        </div>
+    </div>
+
+    <script>
+        // Данные треков, вставленные Python-скриптом
+        var tracksData = [{"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -31, "snr": 5.8}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -29, "snr": 5.8}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -30, "snr": 5.5}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -38, "snr": 6.5}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -68, "snr": 6.2}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -81, "snr": 5.0}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -102, "snr": -9.0}, {"timestamp": 1776658136, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -41, "snr": 6.8}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -31, "snr": 5.8}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -29, "snr": 5.8}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -30, "snr": 5.5}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -38, "snr": 6.5}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -68, "snr": 6.2}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -81, "snr": 5.0}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -102, "snr": -9.0}, {"timestamp": 1776658196, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 66, "rssi": -41, "snr": 6.8}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -31, "snr": 5.8}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -29, "snr": 5.8}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -30, "snr": 5.5}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -38, "snr": 6.5}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -68, "snr": 6.2}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -81, "snr": 5.0}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -102, "snr": -9.0}, {"timestamp": 1776658256, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -41, "snr": 6.8}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -31, "snr": 5.8}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -29, "snr": 5.8}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -30, "snr": 5.5}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -38, "snr": 6.5}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -68, "snr": 6.2}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -81, "snr": 5.0}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -102, "snr": -9.0}, {"timestamp": 1776658316, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 67, "rssi": -41, "snr": 6.8}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -29, "snr": 7.0}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -26, "snr": 7.0}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -27, "snr": 6.0}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -30, "snr": 7.0}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -48, "snr": 6.0}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -104, "snr": -8.8}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -81, "snr": 5.5}, {"timestamp": 1776658436, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -31, "snr": 6.0}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -29, "snr": 7.0}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -26, "snr": 7.0}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -27, "snr": 6.0}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -30, "snr": 7.0}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -48, "snr": 6.0}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -104, "snr": -8.8}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -81, "snr": 5.5}, {"timestamp": 1776658497, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -31, "snr": 6.0}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -29, "snr": 7.0}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -26, "snr": 7.0}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -27, "snr": 6.0}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -30, "snr": 7.0}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -48, "snr": 6.0}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -104, "snr": -8.8}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -81, "snr": 5.5}, {"timestamp": 1776658557, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 68, "rssi": -31, "snr": 6.0}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -29, "snr": 7.0}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -18, "snr": 6.2}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -26, "snr": 7.0}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -27, "snr": 6.0}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -30, "snr": 7.0}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -48, "snr": 6.0}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -104, "snr": -8.8}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -81, "snr": 5.5}, {"timestamp": 1776658617, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -31, "snr": 6.0}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -21, "snr": 6.2}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.8}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -28, "snr": 6.5}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 5.5}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -38, "snr": 6.0}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -44, "snr": 5.8}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -80, "snr": 4.5}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776658738, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -31, "snr": 6.5}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -21, "snr": 6.2}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.8}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -28, "snr": 6.5}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 5.5}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -38, "snr": 6.0}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -44, "snr": 5.8}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -80, "snr": 4.5}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776658798, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -31, "snr": 6.5}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -21, "snr": 6.2}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.8}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -28, "snr": 6.5}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 5.5}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -38, "snr": 6.0}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -44, "snr": 5.8}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -80, "snr": 4.5}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776658858, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -31, "snr": 6.5}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -21, "snr": 6.2}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.8}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -28, "snr": 6.5}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 5.5}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -38, "snr": 6.0}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -44, "snr": 5.8}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -80, "snr": 4.5}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776658919, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -31, "snr": 6.5}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -22, "snr": 7.2}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 5.2}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -25, "snr": 5.8}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -44, "snr": 5.8}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -51, "snr": 5.8}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -75, "snr": 5.8}, {"timestamp": 1776659040, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -46, "snr": 6.8}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -22, "snr": 7.2}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -29, "snr": 5.2}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -25, "snr": 5.8}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -44, "snr": 5.8}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -51, "snr": 5.8}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -75, "snr": 5.8}, {"timestamp": 1776659100, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -46, "snr": 6.8}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -22, "snr": 7.2}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -29, "snr": 5.2}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -25, "snr": 5.8}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -44, "snr": 5.8}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -51, "snr": 5.8}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -75, "snr": 5.8}, {"timestamp": 1776659160, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 69, "rssi": -46, "snr": 6.8}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -22, "snr": 7.2}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -29, "snr": 5.2}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -25, "snr": 5.8}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -44, "snr": 5.8}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -51, "snr": 5.8}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -75, "snr": 5.8}, {"timestamp": 1776659221, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 57, "rssi": -46, "snr": 6.8}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -23, "snr": 6.2}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 6.2}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -27, "snr": 6.2}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -39, "snr": 5.8}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -42, "snr": 5.8}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -86, "snr": 4.8}, {"timestamp": 1776659342, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -23, "snr": 6.2}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 6.2}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -27, "snr": 6.2}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -39, "snr": 5.8}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -42, "snr": 5.8}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -86, "snr": 4.8}, {"timestamp": 1776659402, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -23, "snr": 6.2}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 6.2}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -27, "snr": 6.2}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -39, "snr": 5.8}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -42, "snr": 5.8}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -86, "snr": 4.8}, {"timestamp": 1776659463, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -23, "snr": 6.2}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -15, "snr": 6.5}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -29, "snr": 6.2}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -27, "snr": 6.2}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -39, "snr": 5.8}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -42, "snr": 5.8}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -86, "snr": 4.8}, {"timestamp": 1776659523, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -57, "snr": 6.2}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -26, "snr": 6.2}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -18, "snr": 6.8}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -24, "snr": 5.8}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -28, "snr": 6.5}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -30, "snr": 5.5}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -44, "snr": 6.0}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -91, "snr": 0.8}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -74, "snr": 6.0}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -84, "snr": 4.8}, {"timestamp": 1776659644, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 70, "rssi": -28, "snr": 6.0}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -26, "snr": 6.2}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -18, "snr": 6.8}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -24, "snr": 5.8}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -28, "snr": 6.5}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -30, "snr": 5.5}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -44, "snr": 6.0}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -91, "snr": 0.8}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -74, "snr": 6.0}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -84, "snr": 4.8}, {"timestamp": 1776659705, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -28, "snr": 6.0}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -26, "snr": 6.2}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -18, "snr": 6.8}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -24, "snr": 5.8}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -28, "snr": 6.5}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -30, "snr": 5.5}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -44, "snr": 6.0}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -91, "snr": 0.8}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -74, "snr": 6.0}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -84, "snr": 4.8}, {"timestamp": 1776659765, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -28, "snr": 6.0}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -26, "snr": 6.2}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -18, "snr": 6.8}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -24, "snr": 5.8}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -28, "snr": 6.5}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -30, "snr": 5.5}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -44, "snr": 6.0}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -91, "snr": 0.8}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -74, "snr": 6.0}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -84, "snr": 4.8}, {"timestamp": 1776659826, "device_id": 4219518239, "lat": 52.518435, "lon": 85.1576216, "alt": 202, "battery": 71, "rssi": -28, "snr": 6.0}];
+
+        // ---------- Карта ----------
+        var map = L.map('map');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var allPoints = [];
+        var deviceTracks = {};
+
+        tracksData.forEach(function(pt) {
+            var dev = pt.device_id.toString(16);
+            if (!deviceTracks[dev]) {
+                deviceTracks[dev] = [];
+            }
+            deviceTracks[dev].push([pt.lat, pt.lon]);
+            allPoints.push([pt.lat, pt.lon]);
+        });
+
+        Object.keys(deviceTracks).forEach(function(dev) {
+            var points = deviceTracks[dev];
+            var hue = (parseInt(dev, 16) * 137) % 360;
+            var color = 'hsl(' + hue + ', 80%, 50%)';
+
+            L.polyline(points, {color: color, weight: 4, opacity: 0.7}).addTo(map);
+
+            if (points.length > 0) {
+                L.circleMarker(points[0], {
+                    radius: 6, color: 'green', fillColor: '#fff', fillOpacity: 1, weight: 3
+                }).bindTooltip('Start 0x' + dev).addTo(map);
+            }
+            if (points.length > 1) {
+                L.circleMarker(points[points.length-1], {
+                    radius: 6, color: 'red', fillColor: '#fff', fillOpacity: 1, weight: 3
+                }).bindTooltip('End 0x' + dev).addTo(map);
+            }
+            points.forEach(function(coord) {
+                L.circleMarker(coord, {
+                    radius: 3, color: color, fillColor: '#fff', fillOpacity: 1, weight: 2
+                }).addTo(map);
+            });
+        });
+
+        if (allPoints.length > 0) {
+            map.fitBounds(L.latLngBounds(allPoints), {padding: [50, 50]});
+        }
+
+        // ---------- Статистика ----------
+        var total = tracksData.length;
+        document.getElementById('totalPoints').innerText = total;
+
+        // Заряд
+        var batteries = tracksData.map(p => p.battery);
+        var avgBattery = (batteries.reduce((a,b) => a+b, 0) / batteries.length).toFixed(1);
+        document.getElementById('avgBattery').innerText = avgBattery + '%';
+
+        // Длительность
+        var timestamps = tracksData.map(p => p.timestamp);
+        var minTs = Math.min(...timestamps);
+        var maxTs = Math.max(...timestamps);
+        var durationSec = maxTs - minTs;
+        var hours = Math.floor(durationSec / 3600);
+        var minutes = Math.floor((durationSec % 3600) / 60);
+        document.getElementById('duration').innerText = hours + 'ч ' + minutes + 'м';
+
+        // Макс SNR
+        var snrs = tracksData.map(p => p.snr);
+        var maxSnr = Math.max(...snrs).toFixed(1);
+        document.getElementById('maxSnr').innerText = maxSnr + ' dB';
+
+        // Круговая диаграмма заряда (категории)
+        var batteryCategories = {'<30%':0, '30-60%':0, '>60%':0};
+        batteries.forEach(b => {
+            if (b < 30) batteryCategories['<30%']++;
+            else if (b <= 60) batteryCategories['30-60%']++;
+            else batteryCategories['>60%']++;
+        });
+        var ctxBattery = document.getElementById('batteryChart').getContext('2d');
+        new Chart(ctxBattery, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(batteryCategories),
+                datasets: [{
+                    data: Object.values(batteryCategories),
+                    backgroundColor: ['#e74c3c', '#f1c40f', '#2ecc71']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // График RSSI/SNR по времени
+        var chartTimestamps = timestamps.map(ts => new Date(ts * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+        var rssiValues = tracksData.map(p => p.rssi);
+        var snrValues = tracksData.map(p => p.snr);
+        var ctxSignal = document.getElementById('signalChart').getContext('2d');
+        new Chart(ctxSignal, {
+            type: 'line',
+            data: {
+                labels: chartTimestamps,
+                datasets: [
+                    { label: 'RSSI (dBm)', data: rssiValues, borderColor: '#3498db', yAxisID: 'y' },
+                    { label: 'SNR (dB)', data: snrValues, borderColor: '#e67e22', yAxisID: 'y1' }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index' },
+                scales: {
+                    y: { type: 'linear', position: 'left', title: { display: true, text: 'RSSI (dBm)' } },
+                    y1: { type: 'linear', position: 'right', title: { display: true, text: 'SNR (dB)' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+
+        // Заполняем информационную строку
+        var firstTime = new Date(minTs * 1000).toLocaleString();
+        var lastTime = new Date(maxTs * 1000).toLocaleString();
+        document.querySelector('.info-text').innerHTML = document.querySelector('.info-text').innerHTML
+            .replace('0xfb80bd1f', '4219518239')
+            .replace('__FIRST_TIME__', firstTime)
+            .replace('__LAST_TIME__', lastTime);
+    </script>
+</body>
+</html>
